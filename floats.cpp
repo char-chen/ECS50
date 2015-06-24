@@ -4,6 +4,8 @@
 using namespace std;
 
 void printHex(char *i, char *f);
+void normalize(char *n);
+void convert(char *n, char *i, char *f);
 int ctoi(char *a);
 int numOfDigits(int n);
 
@@ -23,16 +25,31 @@ int main()
 
 void printHex(char *in, char *frac)
 {
-  short sign = 0; 
+  char number[33];
+  convert(number, in, frac);
+  normalize(number);
+  cout << number << endl;
+  //cout << "IEEE 32: " << endl;   
+} //printHex
+
+void normalize(char *n)
+{
+    
+} //normalize
+
+void convert(char *num, char *in, char *frac)
+{
   char integer[9], fraction[24];
   fraction[0] = integer[0] = '0';
   
-  if (in[0] == '-')
-    sign = 1;
-   
   for (int val = ctoi(in), i = 0; val != 0; val /= 2, i++)
     integer[i] = val % 2 + 48;
   
+  for (int i = strlen(integer) - 1, j = 0; i >= 0; i--, j++)
+    num[j] = integer[i];
+
+  num[strlen(num)] = '.';
+   
   for (int val = ctoi(frac), i = 0; val != 0; i++)
   {
     int digit = numOfDigits(val);
@@ -42,10 +59,10 @@ void printHex(char *in, char *frac)
     if (fraction[i] == '1')
       val = val % (int) pow(10, digit); 
   } 
-  
-  cout << fraction << endl;
-  //cout << "IEEE 32: " << endl;   
-} //printHex
+ 
+  for (unsigned int i = 0, j = strlen(num); i < strlen(fraction); i++, j++)
+    num[j] = fraction[i];
+} //convert
 
 int numOfDigits(int num)
 {
@@ -55,7 +72,7 @@ int numOfDigits(int num)
     num /= 10;
   
   return i;
-}
+} //numOfDigits
 
 int ctoi(char *str)
 {
