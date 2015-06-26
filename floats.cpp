@@ -6,9 +6,10 @@ using namespace std;
 void printHex(char *i, char *f);
 void normalize(char *n, char s);
 void convert(char *n, const char *i, const char *f);
+void divide (char *a);
+void multiply(char *a);
+int ctoi(char a);
 char toHex(int n);
-int ctoi(const char *a);
-int numOfDigits(int n);
 
 int main()
 {
@@ -21,18 +22,18 @@ int main()
   tok = strtok(NULL, "");
   char fraction[strlen(tok) + 1];
   strcpy(fraction, tok);
-  printHex(integer, fraction);  
+  printHex(integer, fraction);
 } //main
 
 void printHex(char *in, char *frac)
 {
-  char ieee32[9], ieee64[17], number32[33], number64[65], sign = in[0];
+  char number32[33];//, sign = in[0], ieee32[9], ieee64[17], number64[65];
   convert(number32, in, frac);
-  normalize(number32, sign);
-  convert(number64, in, frac);
-  normalize(number64, sign);
-  
-  for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
+  //normalize(number32, sign);
+  //convert(number64, in, frac);
+  //normalize(number64, sign);
+  cout << number32 << endl; 
+  /*for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
   {
     for (int k = 0, l = 3; k < 4; k++, l--)
       sum += (int)(number32[i + k] - 48) * (int)pow(2, l);
@@ -40,40 +41,68 @@ void printHex(char *in, char *frac)
     ieee32[j++] = toHex(sum);   
   }
        
-  cout << "IEEE 32: " << ieee32 << endl;   
+  cout << "IEEE 32: " << ieee32 << endl;   */
 } //printHex
 
 void normalize(char *n, char sign)
 {
-  int pos = 0, shift = -1;
+  unsigned int pos = 0;
+  int shift = -1;
   char exponent[9], mantissa[24], result[33];
   
+  //get the number of digits needed to shift 
   if (n[0] == '1')
+  {
     for (char *p = n; *p != '.'; p++)
       shift++;
+  }
   else
-    ;
-  
-  if (shift >= 0)
   {
-    for (int i = 1; n[i] != '\0'; i++)
-      if (n[i] != '.')
-        mantissa[pos++] = n[i];
-    
-    while (pos++ < 23)
-      strcat(mantissa, "0");   
+    for (char *p = &n[strlen(n) - 1]; *p != '.'; p--)
+      shift--;
+
+    shift++;
   }
   
-  for (int val = shift + 127, i = 0; val != 0; val /= 2, i++)
-    exponent[i] = val % 2 + 48;
+  //get mantissa
+  for (int i = 1; n[i] != '\0'; i++)
+  {
+    if (shift >= 0 && n[i] != '.')
+      mantissa[pos++] = n[i];
+    else if (shift < 0 && n[i] == '1')
+    {
+      char *p = &n[i];
+      mantissa[0] = '\0';
+      strcat(mantissa, ++p);
+      pos = strlen(mantissa);
+      break;
+    }
+  }
+   
+  while (pos++ < 23)
+    strcat(mantissa, "0");
 
+   
+  for (int val = shift + 127, i = 0; val != 0; val /= 2, i++)
+    exponent[i] = val % 2 + '0';
+  
   if (sign == '-')
     result[0] = '1';
   else
     result[0] = '0';
- 
-  for (int i = strlen(exponent) - 1, j = 1; i >= 0; i--, j++)
-    result[j] = exponent[i];
+  
+  pos = 0;
+  
+  if (shift < 0)
+  {
+    result[1] = '0';
+    result[2] = '\0';
+  }
+  else
+    result[1] = '\0';
+  
+  for (char *p = &exponent[strlen(exponent) - 1]; pos < strlen(exponent); pos++)
+    strncat(result, p--, 1);
   
   strcat(result, mantissa);
   strcpy(n, result);
@@ -81,73 +110,112 @@ void normalize(char *n, char sign)
 
 void convert(char *num, const char *in, const char *frac)
 {
-  char integer[9], fraction[24];
-  fraction[0] = integer[0] = '0';
+  char integer[9], fraction[24], value[256];
+  fraction[0] = integer[0] = '0'; 
+  strcpy(value, in);
   
-  for (int val = ctoi(in), i = 0; val != 0; val /= 2, i++)
-    integer[i] = val % 2 + 48;
+  //Remove negative sign
+  if (value[0] == '-')
+    for (char *p = value; *p != '\0'; p++)
+      *p = *(p+1);
+  
+  value[strlen(value)] = '\0';  //Make sure that the null terminator is there.
+  
+  //Convert integer to binary
+  for (int i = 0; !(strlen(value) == 1 && value[0] == '0'); divide(value), i++)
+    integer[i] = (ctoi(value[strlen(value) - 1]) % 2) + '0';
   
   for (int i = strlen(integer) - 1, j = 0; i >= 0; i--, j++)
     num[j] = integer[i];
-
+  
   num[strlen(num)] = '.';
-   
-  for (int val = ctoi(frac), i = 0; val != 0; i++)
+  strcpy(value, frac);
+  
+  //Convert decimal to binary
+  for (int i = 0, j, prev = strlen(value), done = 0; !done; i++)
   {
-    int digit = numOfDigits(val);
-    val *= 2;
-    fraction[i] = val / pow(10, digit) + 48;
-    
+    done = 1;
+    multiply(value);
+    fraction[i] = strlen(value) - prev + '0'; 
+
     if (fraction[i] == '1')
-      val = val % (int) pow(10, digit); 
-  } 
- 
-  for (unsigned int i = 0, j = strlen(num); i < strlen(fraction); i++, j++)
-    num[j] = fraction[i];
+    {
+      for (j = 1; value[j] != '\0'; j++)
+      {
+        if (value[j] != '0')
+          done = 0;
+        
+        value[j - 1] = value[j];
+      }
+      
+      value[j - 1] = '\0';
+    }
+    else
+      done = 0;
+    
+    prev = strlen(value);
+  }
+  
+  strcat(num, fraction);
 } //convert
 
-int numOfDigits(int num)
+void divide(char *val) 
 {
-  int i = 0;
+  char temp[256];
   
-  for (i = 0; num != 0; i++)
-    num /= 10;
-  
-  return i;
-} //numOfDigits
+  for (int i = 0, j = 0, borrow = 0; val[i] != '\0'; i++)
+  {
+    int digit = ctoi(val[i]);
+    
+    if (digit >= 2 || borrow != 0)
+    {
+      temp[j++] = ((borrow * 10 + digit) / 2) + '0';
+      borrow = digit % 2;
+    }
+    else
+    {
+      borrow = digit;
+      temp[j] = '0';
+    }
 
-int ctoi(const char *s)
+    temp[i + 1] = '\0';
+  }
+  
+  strcpy(val, temp);
+} //divide
+
+void multiply(char *val)
 {
-  char str[strlen(s) + 1];
-  strcpy(str, s);
+  char temp[256];
+  temp[0] = '\0';
   
-  if (str[0] == '-')
-    for (char *ps = str; *ps != '\0'; ps++)
-      *ps = *(ps+1);
+  for (int i = strlen(val) - 1, carry = 0, product = 0; i >= 0 || carry == 1; i--)
+  {
+    if (i > -1)
+      product = carry + ctoi(val[i]) * 2;
+    else
+      product = carry; 
+    
+    //Shift all digits to one right
+    for (int j = strlen(val) - i - 1; j >= 0; j--)
+      temp[j + 1] = temp[j];
+    
+    temp[0] = product % 10 + '0';
+    carry = product / 10;
+  }
 
-  str[strlen(str)] = '\0';
-  int i, num=0;
-  
-  for(i = 0; str[i] >= '0' && str[i] <= '9'; i++)
-    num = (str[i] - '0') + 10 * num;
-  
-  return num;
+  strcpy(val, temp);
+} //multiply
+
+int ctoi(char s)
+{
+  return s - '0';
 } //ctoi
 
 char toHex(int n)
 {
-  if (n == 10)
-    return 'A';
-  else if (n == 11)
-    return 'B';
-  else if (n == 12)
-    return 'C';
-  else if (n == 13)
-    return 'D';
-  else if (n == 14)
-    return 'E';
-  else if (n == 15)
-    return 'F';
+  if (n >= 10)
+    return n - 10 + 'A';
   else
-    return n + 48; 
+    return n + '0';
 } //toHex
