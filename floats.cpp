@@ -41,7 +41,7 @@ void printHex(char *in, char *frac)
     
     ieee32[j++] = toHex(sum);   
   }
-       
+ 
   cout << "IEEE 32: " << ieee32 << endl;
 } //printHex
 
@@ -52,18 +52,14 @@ void normalize(char *n, char sign)
   char exponent[9], mantissa[24], result[33];
   
   //Get the number of digits needed to shift 
-  if (n[0] == '1')
-  {
+  if (strcmp(n, "0.0") == 0)
+    shift = 0;
+  else if (n[0] == '1')
     for (char *p = n; *p != '.'; p++)
       shift++;
-  }
   else
-  {
-    for (char *p = &n[strlen(n) - 1]; *p != '.'; p--)
+    for (int i = 2; n[i] != '1'; i++)
       shift--;
-
-    shift++;
-  }
   
   //Get mantissa bits
   for (int i = 1; n[i] != '\0'; i++)
@@ -86,10 +82,16 @@ void normalize(char *n, char sign)
   //Pad the rest of the bits with 0s 
   while (pos++ < 23)
     strcat(mantissa, "0");
- 
+  
   //Get exponent bits
   for (int i = 0, val = shift + 127; val != 0; val /= 2)
   {
+    if (shift == 0)
+    {
+      strcpy(exponent, "00000000");
+      break;
+    }
+  
     exponent[i++] = (char) (val % 2 + '0');
     exponent[i] = '\0'; //Needed due to mysterious extra bits appear
   }
@@ -120,7 +122,6 @@ void normalize(char *n, char sign)
 void convert(char *num, const char *in, const char *frac)
 {
   char integer[9], fraction[24], value[256];
-  fraction[0] = integer[0] = '0'; 
   strcpy(value, in);
   
   //Remove negative sign
@@ -167,7 +168,8 @@ void convert(char *num, const char *in, const char *frac)
     
     prev = strlen(value);
 
-    if (i == 23)
+  //cout << i%10 << " "  <<  fraction << endl;
+    if (i == 22)
       break;
   }
   
