@@ -34,13 +34,13 @@ void printHex(char *in, char *frac)
   //cout << number32 << endl;
 
   //Convert bits to hex representation 
-  /*for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
+  for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
   {
     for (int k = 0, l = 3; k < 4; k++, l--)
       sum += (int)(number32[i + k] - 48) * (int)pow(2, l);
     
     ieee32[j++] = toHex(sum);   
-  }*/
+  }
        
   cout << "IEEE 32: " << ieee32 << endl;
 } //printHex
@@ -64,12 +64,15 @@ void normalize(char *n, char sign)
 
     shift++;
   }
- 
-  //Get mantissa
+  
+  //Get mantissa bits
   for (int i = 1; n[i] != '\0'; i++)
   {
     if (shift >= 0 && n[i] != '.')
+    {
       mantissa[pos++] = n[i];
+      mantissa[pos] = '\0';
+    }
     else if (shift < 0 && n[i] == '1')
     {
       char *p = &n[i];
@@ -79,12 +82,17 @@ void normalize(char *n, char sign)
       break;
     }
   }
-   
+  
+  //Pad the rest of the bits with 0s 
   while (pos++ < 23)
     strcat(mantissa, "0");
-
-  for (int val = shift + 127, i = 0; val != 0; val /= 2)
-    exponent[i++] = val % 2 + '0';
+ 
+  //Get exponent bits
+  for (int i = 0, val = shift + 127; val != 0; val /= 2)
+  {
+    exponent[i++] = (char) (val % 2 + '0');
+    exponent[i] = '\0'; //Needed due to mysterious extra bits appear
+  }
   
   if (sign == '-')
     result[0] = '1';
@@ -106,6 +114,7 @@ void normalize(char *n, char sign)
   
   strcat(result, mantissa);
   strcpy(n, result);
+  //cout << n << endl;
 } //normalize
 
 void convert(char *num, const char *in, const char *frac)
@@ -134,6 +143,9 @@ void convert(char *num, const char *in, const char *frac)
   //Convert decimal to binary
   for (int i = 0, j, prev = strlen(value), done = 0; !done; i++)
   {
+    if (value[0] == '0' && value[1] == '\0')
+      break;
+    
     done = 1;
     multiply(value);
     fraction[i] = strlen(value) - prev + '0'; 
