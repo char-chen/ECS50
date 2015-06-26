@@ -8,7 +8,6 @@ void normalize(char *n, char s);
 void convert(char *n, const char *i, const char *f);
 void divide (char *a);
 void multiply(char *a);
-int ctoi(char a);
 char toHex(int n);
 
 int main()
@@ -27,21 +26,21 @@ int main()
 
 void printHex(char *in, char *frac)
 {
-  char number32[33];//, sign = in[0], ieee32[9], ieee64[17], number64[65];
+  char sign = in[0], number32[33], ieee32[9];//, ieee64[17], number64[65];
   convert(number32, in, frac);
   //normalize(number32, sign);
   //convert(number64, in, frac);
   //normalize(number64, sign);
-  cout << number32 << endl; 
+  //cout << number32 << endl; 
   /*for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
   {
     for (int k = 0, l = 3; k < 4; k++, l--)
       sum += (int)(number32[i + k] - 48) * (int)pow(2, l);
     
     ieee32[j++] = toHex(sum);   
-  }
+  }*/
        
-  cout << "IEEE 32: " << ieee32 << endl;   */
+  cout << "IEEE 32: " << ieee32 << endl;
 } //printHex
 
 void normalize(char *n, char sign)
@@ -123,14 +122,14 @@ void convert(char *num, const char *in, const char *frac)
   
   //Convert integer to binary
   for (int i = 0; !(strlen(value) == 1 && value[0] == '0'); divide(value), i++)
-    integer[i] = (ctoi(value[strlen(value) - 1]) % 2) + '0';
+    integer[i] = ((value[strlen(value) - 1] - '0') % 2) + '0';
   
   for (int i = strlen(integer) - 1, j = 0; i >= 0; i--, j++)
     num[j] = integer[i];
   
   num[strlen(num)] = '.';
   strcpy(value, frac);
-  
+   
   //Convert decimal to binary
   for (int i = 0, j, prev = strlen(value), done = 0; !done; i++)
   {
@@ -156,6 +155,7 @@ void convert(char *num, const char *in, const char *frac)
     prev = strlen(value);
   }
   
+  cout << fraction << endl;
   strcat(num, fraction);
 } //convert
 
@@ -165,7 +165,7 @@ void divide(char *val)
   
   for (int i = 0, j = 0, borrow = 0; val[i] != '\0'; i++)
   {
-    int digit = ctoi(val[i]);
+    int digit = val[i] - '0';
     
     if (digit >= 2 || borrow != 0)
     {
@@ -192,7 +192,7 @@ void multiply(char *val)
   for (int i = strlen(val) - 1, carry = 0, product = 0; i >= 0 || carry == 1; i--)
   {
     if (i > -1)
-      product = carry + ctoi(val[i]) * 2;
+      product = carry + (val[i] - '0') * 2;
     else
       product = carry; 
     
@@ -206,11 +206,6 @@ void multiply(char *val)
 
   strcpy(val, temp);
 } //multiply
-
-int ctoi(char s)
-{
-  return s - '0';
-} //ctoi
 
 char toHex(int n)
 {
