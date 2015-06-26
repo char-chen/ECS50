@@ -28,10 +28,12 @@ void printHex(char *in, char *frac)
 {
   char sign = in[0], number32[33], ieee32[9];//, ieee64[17], number64[65];
   convert(number32, in, frac);
-  //normalize(number32, sign);
+  normalize(number32, sign);
   //convert(number64, in, frac);
   //normalize(number64, sign);
-  //cout << number32 << endl; 
+  //cout << number32 << endl;
+
+  //Convert bits to hex representation 
   /*for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
   {
     for (int k = 0, l = 3; k < 4; k++, l--)
@@ -49,7 +51,7 @@ void normalize(char *n, char sign)
   int shift = -1;
   char exponent[9], mantissa[24], result[33];
   
-  //get the number of digits needed to shift 
+  //Get the number of digits needed to shift 
   if (n[0] == '1')
   {
     for (char *p = n; *p != '.'; p++)
@@ -62,8 +64,8 @@ void normalize(char *n, char sign)
 
     shift++;
   }
-  
-  //get mantissa
+ 
+  //Get mantissa
   for (int i = 1; n[i] != '\0'; i++)
   {
     if (shift >= 0 && n[i] != '.')
@@ -81,9 +83,8 @@ void normalize(char *n, char sign)
   while (pos++ < 23)
     strcat(mantissa, "0");
 
-   
-  for (int val = shift + 127, i = 0; val != 0; val /= 2, i++)
-    exponent[i] = val % 2 + '0';
+  for (int val = shift + 127, i = 0; val != 0; val /= 2)
+    exponent[i++] = val % 2 + '0';
   
   if (sign == '-')
     result[0] = '1';
@@ -121,7 +122,7 @@ void convert(char *num, const char *in, const char *frac)
   value[strlen(value)] = '\0';  //Make sure that the null terminator is there.
   
   //Convert integer to binary
-  for (int i = 0; !(strlen(value) == 1 && value[0] == '0'); divide(value), i++)
+  for (int i = 0; value[0] != '\0'; divide(value), i++)
     integer[i] = ((value[strlen(value) - 1] - '0') % 2) + '0';
   
   for (int i = strlen(integer) - 1, j = 0; i >= 0; i--, j++)
@@ -153,9 +154,11 @@ void convert(char *num, const char *in, const char *frac)
       done = 0;
     
     prev = strlen(value);
+
+    if (i == 23)
+      break;
   }
   
-  cout << fraction << endl;
   strcat(num, fraction);
 } //convert
 
@@ -175,10 +178,12 @@ void divide(char *val)
     else
     {
       borrow = digit;
-      temp[j] = '0';
+
+      if (i != 0)
+        temp[j++] = '0';
     }
 
-    temp[i + 1] = '\0';
+    temp[j] = '\0';
   }
   
   strcpy(val, temp);
