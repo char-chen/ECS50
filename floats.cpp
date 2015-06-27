@@ -3,8 +3,8 @@
 #include <cmath>
 using namespace std;
 
-void printHex(char *i, char *f);
-void normalize(char *n, char s);
+void printHex(const char *i, const char *f);
+void normalize(char *t, char *n, char s);
 void convert(char *n, const char *i, const char *f);
 void divide (char *a);
 void multiply(char *a);
@@ -24,14 +24,13 @@ int main()
   printHex(integer, fraction);
 } //main
 
-void printHex(char *in, char *frac)
+void printHex(const char *in, const char *frac)
 {
-  char sign = in[0], number32[33], ieee32[9];//, ieee64[17], number64[65];
-  convert(number32, in, frac);
-  normalize(number32, sign);
+  char num[1000] = {0}, sign = in[0], number32[33], ieee32[9];//, ieee64[17], number64[65];
+  convert(num, in, frac);
+  normalize(num, number32, sign);
   //convert(number64, in, frac);
   //normalize(number64, sign);
-  //cout << number32 << endl;
 
   //Convert bits to hex representation 
   for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
@@ -45,34 +44,60 @@ void printHex(char *in, char *frac)
   cout << "IEEE 32: " << ieee32 << endl;
 } //printHex
 
-void normalize(char *n, char sign)
+void normalize(char *temp, char *num, char sign)
 {
   unsigned int pos = 0;
   int shift = -1;
-  char exponent[9], mantissa[24], result[33];
+  char exponent[9] = {0}, mantissa[24] = {0}, result[33] = {0};
   
+  if (sign == '-')
+    result[0] = '1';
+  else
+    result[0] = '0';
+  
+  cout << temp << endl; 
   //Get the number of digits needed to shift 
-  if (strcmp(n, "0.0") == 0)
+  if (strcmp(temp, "0.0") == 0)
     shift = 0;
-  else if (n[0] == '1')
-    for (char *p = n; *p != '.'; p++)
+  else if (temp[0] == '1')
+    for (char *p = temp; *p != '.'; p++)
       shift++;
   else
-    for (int i = 2; n[i] != '1'; i++)
+    for (int i = 2; temp[i] != '1'; i++)
       shift--;
+ 
+  //cout << shift << endl; 
+  //Get exponent bits
+  for (int i = 0, val = shift + 127; val != 0; val /= 2)
+  {
+    if (shift == 0)
+    {
+      strcpy(exponent, "00000000");
+      break;
+    }
+
+    exponent[i++] = (char) (val % 2 + '0');
+  }
+ 
+  if (shift < 0)
+    result[1] = '0';
+   
+  for (char *p = &exponent[strlen(exponent) - 1]; pos < strlen(exponent); pos++)
+    strncat(result, p--, 1);
+  
+  cout << result << endl;
+  pos = 0;
   
   //Get mantissa bits
-  for (int i = 1; n[i] != '\0'; i++)
+  for (int i = 1; temp[i] != '\0' && pos < 23; i++)
   {
-    if (shift >= 0 && n[i] != '.')
+    if (shift >= 0 && temp[i] != '.')
     {
-      mantissa[pos++] = n[i];
-      mantissa[pos] = '\0';
+      mantissa[pos++] = temp[i];
     }
-    else if (shift < 0 && n[i] == '1')
+    else if (shift < 0 && temp[i] == '1')
     {
-      char *p = &n[i];
-      mantissa[0] = '\0';
+      char *p = &temp[i];
       strcat(mantissa, ++p);
       pos = strlen(mantissa);
       break;
@@ -83,45 +108,15 @@ void normalize(char *n, char sign)
   while (pos++ < 23)
     strcat(mantissa, "0");
   
-  //Get exponent bits
-  for (int i = 0, val = shift + 127; val != 0; val /= 2)
-  {
-    if (shift == 0)
-    {
-      strcpy(exponent, "00000000");
-      break;
-    }
-  
-    exponent[i++] = (char) (val % 2 + '0');
-    exponent[i] = '\0'; //Needed due to mysterious extra bits appear
-  }
-  
-  if (sign == '-')
-    result[0] = '1';
-  else
-    result[0] = '0';
-  
-  pos = 0;
-  
-  if (shift < 0)
-  {
-    result[1] = '0';
-    result[2] = '\0';
-  }
-  else
-    result[1] = '\0';
-  
-  for (char *p = &exponent[strlen(exponent) - 1]; pos < strlen(exponent); pos++)
-    strncat(result, p--, 1);
-  
   strcat(result, mantissa);
-  strcpy(n, result);
-  //cout << n << endl;
+  strcpy(num, result);
+  //cout << n << endl;*/
 } //normalize
 
 void convert(char *num, const char *in, const char *frac)
 {
-  char integer[9], fraction[24], value[256];
+  char integer[129] = {0}, fraction[256] = {0}, value[256];
+  int pos;
   strcpy(value, in);
   
   //Remove negative sign
@@ -129,21 +124,21 @@ void convert(char *num, const char *in, const char *frac)
     for (char *p = value; *p != '\0'; p++)
       *p = *(p+1);
   
-  value[strlen(value)] = '\0';  //Make sure that the null terminator is there.
-  
   //Convert integer to binary
-  for (int i = 0; value[0] != '\0'; divide(value), i++)
-    integer[i] = ((value[strlen(value) - 1] - '0') % 2) + '0';
+  for (pos = 0; value[0] != '\0' && pos < 128; divide(value), pos++)
+    integer[pos] = ((value[strlen(value) - 1] - '0') % 2) + '0';
   
   for (int i = strlen(integer) - 1, j = 0; i >= 0; i--, j++)
     num[j] = integer[i];
   
   num[strlen(num)] = '.';
   strcpy(value, frac);
-   
+  
   //Convert decimal to binary
-  for (int i = 0, j, prev = strlen(value), done = 0; !done; i++)
+  for (int i = 0, j, prev = strlen(value), done = 0; !done && i < 255; i++)
   {
+    fraction[0] = '0';
+    
     if (value[0] == '0' && value[1] == '\0')
       break;
     
@@ -167,10 +162,6 @@ void convert(char *num, const char *in, const char *frac)
       done = 0;
     
     prev = strlen(value);
-
-  //cout << i%10 << " "  <<  fraction << endl;
-    if (i == 22)
-      break;
   }
   
   strcat(num, fraction);
