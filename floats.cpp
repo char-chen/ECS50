@@ -26,11 +26,10 @@ int main()
 
 void printHex(const char *in, const char *frac)
 {
-  char num[1000] = {0}, sign = in[0], number32[33], ieee32[9];//, ieee64[17], number64[65];
+  char num[1000] = {0}, sign = in[0], number32[33], ieee32[9], ieee64[17], number64[65];
   convert(num, in, frac);
   normalize(num, number32, sign);
-  //convert(number64, in, frac);
-  //normalize(number64, sign);
+  //normalize(num, number64, sign);
   
   //Convert bits to hex representation 
   for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
@@ -145,7 +144,7 @@ void convert(char *num, const char *in, const char *frac)
 
 void divide(char *val) 
 {
-  char temp[256];
+  char temp[256] = {0};
   
   for (int i = 0, j = 0, borrow = 0; val[i] != '\0'; i++)
   {
@@ -163,8 +162,6 @@ void divide(char *val)
       if (i != 0)
         temp[j++] = '0';
     }
-
-    temp[j] = '\0';
   }
   
   strcpy(val, temp);
@@ -172,8 +169,7 @@ void divide(char *val)
 
 void multiply(char *val)
 {
-  char temp[256];
-  temp[0] = '\0';
+  char temp[256] = {0};
   
   for (int i = strlen(val) - 1, carry = 0, product = 0; i >= 0 || carry == 1; i--)
   {
