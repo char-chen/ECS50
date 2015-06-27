@@ -31,12 +31,12 @@ void printHex(const char *in, const char *frac)
   normalize(num, number32, sign);
   //convert(number64, in, frac);
   //normalize(number64, sign);
-
+  
   //Convert bits to hex representation 
   for (unsigned int i = 0, j = 0, sum = 0; i < strlen(number32); i += 4, sum = 0)
   {
     for (int k = 0, l = 3; k < 4; k++, l--)
-      sum += (int)(number32[i + k] - 48) * (int)pow(2, l);
+      sum += (int)(number32[i + k] - '0') * (int)pow(2, l);
     
     ieee32[j++] = toHex(sum);   
   }
@@ -46,8 +46,7 @@ void printHex(const char *in, const char *frac)
 
 void normalize(char *temp, char *num, char sign)
 {
-  unsigned int pos = 0;
-  int shift = -1;
+  int pos = 0, shift = -1;
   char exponent[9] = {0}, mantissa[24] = {0}, result[33] = {0};
   
   if (sign == '-')
@@ -55,53 +54,35 @@ void normalize(char *temp, char *num, char sign)
   else
     result[0] = '0';
   
-  cout << temp << endl; 
   //Get the number of digits needed to shift 
-  if (strcmp(temp, "0.0") == 0)
-    shift = 0;
-  else if (temp[0] == '1')
-    for (char *p = temp; *p != '.'; p++)
+  if (temp[0] == '1')
+    for (int i = 0; temp[i] != '.' && shift < 128; i++)
       shift++;
-  else
-    for (int i = 2; temp[i] != '1'; i++)
+  else //decimal number
+    for (int i = 2; temp[i] != '1' && shift > -127; i++)
       shift--;
- 
-  //cout << shift << endl; 
-  //Get exponent bits
-  for (int i = 0, val = shift + 127; val != 0; val /= 2)
-  {
-    if (shift == 0)
-    {
-      strcpy(exponent, "00000000");
-      break;
-    }
-
-    exponent[i++] = (char) (val % 2 + '0');
-  }
- 
-  if (shift < 0)
-    result[1] = '0';
-   
-  for (char *p = &exponent[strlen(exponent) - 1]; pos < strlen(exponent); pos++)
-    strncat(result, p--, 1);
   
-  cout << result << endl;
-  pos = 0;
+  //Get exponent bits
+  for (int i = 0, val = shift + 127; i < 8; val /= 2)
+    exponent[i++] = val % 2 + '0';
+ 
+  for (int i = strlen(exponent) - 1, j = 1; i >= 0; i--, j++)
+    result[j] = exponent[i];
   
   //Get mantissa bits
-  for (int i = 1; temp[i] != '\0' && pos < 23; i++)
+  for (int i = 1, start = 0; temp[i] != '\0' && pos < 23; i++)
   {
+    if (shift == 128 || shift == -127)
+      break;  //If number is too small/large to represent
+    
     if (shift >= 0 && temp[i] != '.')
-    {
       mantissa[pos++] = temp[i];
-    }
-    else if (shift < 0 && temp[i] == '1')
-    {
-      char *p = &temp[i];
-      strcat(mantissa, ++p);
-      pos = strlen(mantissa);
-      break;
-    }
+    
+    if (temp[i] == '1') //for shift < 0, start copying after first '1' bit
+      start = 1;
+    
+    if (shift < 0 && start)
+      mantissa[pos++] = temp[i + 1];
   }
   
   //Pad the rest of the bits with 0s 
@@ -110,13 +91,11 @@ void normalize(char *temp, char *num, char sign)
   
   strcat(result, mantissa);
   strcpy(num, result);
-  //cout << n << endl;*/
 } //normalize
 
 void convert(char *num, const char *in, const char *frac)
 {
-  char integer[129] = {0}, fraction[256] = {0}, value[256];
-  int pos;
+  char integer[1000] = {0}, fraction[1000] = {0}, value[256];
   strcpy(value, in);
   
   //Remove negative sign
@@ -125,23 +104,20 @@ void convert(char *num, const char *in, const char *frac)
       *p = *(p+1);
   
   //Convert integer to binary
-  for (pos = 0; value[0] != '\0' && pos < 128; divide(value), pos++)
+  for (int pos = 0; value[0] != '\0'; divide(value), pos++)
     integer[pos] = ((value[strlen(value) - 1] - '0') % 2) + '0';
   
   for (int i = strlen(integer) - 1, j = 0; i >= 0; i--, j++)
     num[j] = integer[i];
-  
+ 
+  //Add decimal point 
   num[strlen(num)] = '.';
-  strcpy(value, frac);
   
   //Convert decimal to binary
+  strcpy(value, frac);
+  
   for (int i = 0, j, prev = strlen(value), done = 0; !done && i < 255; i++)
   {
-    fraction[0] = '0';
-    
-    if (value[0] == '0' && value[1] == '\0')
-      break;
-    
     done = 1;
     multiply(value);
     fraction[i] = strlen(value) - prev + '0'; 
