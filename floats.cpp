@@ -27,14 +27,14 @@ int main()
 
 void printHex(const char *integer, const char *fraction)
 {
-  char num[1000] = {0}, sign = integer[0], number32[33], ieee32[9], ieee64[17], number64[65];
+  char num[2000] = {0}, sign = integer[0], number32[33], ieee32[9] = {0}, ieee64[17] = {0}, number64[65];
   toBinary(num, integer, fraction);
   normalize(num, number32, sign, "32");
-  normalize(num, number64, sign, "64");
   toHexRep(number32, ieee32);
+  cout << "IEEE 32:    " << ieee32 << endl;
+  normalize(num, number64, sign, "64");
   toHexRep(number64, ieee64); 
-  cout << "IEEE 32: " << ieee32 << endl;
-  cout << "IEEE 64: " << ieee64 << endl;
+  cout << "IEEE 64:    " << ieee64 << endl;
 } //printHex
 
 void normalize(const char *temp, char *num, char sign, const char *size)
@@ -87,7 +87,7 @@ void normalize(const char *temp, char *num, char sign, const char *size)
     if (temp[i] == '1') //for shift < 0, start copying after first '1' bit
       start = 1;
     
-    if (shift < 0 && start)
+    if (shift < 0 && start && temp[i + 1] != '\0')
       mantissa[pos++] = temp[i + 1];
   }
   
@@ -122,7 +122,7 @@ void toBinary(char *num, const char *in, const char *frac)
   //Convert decimal to binary
   strcpy(value, frac);
   
-  for (int i = 0, j, prev = strlen(value), done = 0; !done && i < 255; i++)
+  for (int i = 0, j, prev = strlen(value), done = 0; !done && i < 500; i++)
   {
     done = 1;
     multiply(value);
