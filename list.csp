@@ -35,10 +35,3 @@ Loop2:	NOP
 	NOP		; value
 Less: 	.WORD	0
 Greater: 	.WORD	0
-
-
-
-
-
-
-
