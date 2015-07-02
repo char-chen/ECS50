@@ -1,37 +1,37 @@
 	LDS# $E00	; load stack pointer at $E00
-	NOP
+	LDA# $000	; load 0
+	STA  Less	; initialize less
+	STA  Greater	; initialize greater
 	JSR  $E01	; jump to subroutine $E00 aka GET_NUM
-	STA  $021	; store critical value
-Loop:	NOP
-	JSR  $E01	; read in value
+	STA  Critical	; store critical value
+Loop:	JSR  $E01	; read in value
 	CMA# $000	; compares value to 0
-	JLE  $01D	; if <= 0 
-	STA  $022	; store value somewhere else
-Loop2:	NOP
-	JSR  $E01	; read in num
-	DEC  $022	; decrement value
-	CMA  $021	; compare to critical value
-	JLT  $014	; jump to increment less
-	INC  $024	; increment greater
-	NOP
-	LDX  $022	; load value in XR
+	JLE  Jump	; if <= 0 
+	STA  Value	; store value somewhere else
+Loop2:	JSR  $E01	; read in num
+	DEC  Value	; decrement value
+	CMA  Critical	; compare to critical value
+	JLT  Jump2	; jump to increment less
+	INC  Greater	; increment greater
+Loop3:	LDX  Value	; load value in XR
 	CMX# $000	; check if value > 0
-	JLE  $017	; if no, jump to end
-	JMP  $009	; if yes, jump to beginning of loop
-	NOP
-	INC  $023	; increment less
-	JMP  $00F	; jump to check value > 0
-	NOP
-	LDA  $023	
+	JLE  Jump3	; if no, jump to end
+	JMP  Loop2	; if yes, jump to beginning of loop
+Jump2:	INC  Less	; increment less
+	JMP  Loop3	; jump to check value > 0
+Jump3:	LDA  Less	
 	JSR  $E00	; print less
-	LDA  $024
+	LDA  Greater
 	JSR  $E00	; print greater
 	HLT
-	NOP
-	LDA# $000	; NARNIA
+Jump:	LDA# $000	; 
 	JSR  $E00	; print 0
-	JMP  $004
-	NOP		; critical value
-	NOP		; value
-Less: 	.WORD	0
-Greater: 	.WORD	0
+	JMP  Loop
+Critical:	.WORD		; critical value
+Value:	.WORD		; value
+Less: 	.WORD		; less
+Greater: 	.WORD		; greater
+
+
+
+
