@@ -1,0 +1,25 @@
+	LDS# 	$E00	;Load stack pointer to $E800
+	PSH# 	PROMPT_LENGTH	;Prints prompt
+	PSH# 	PROMPT
+	JSR 	$E05	;Print
+	ADS#	2
+	JSR	$E01	;Reads input
+	STA	NUM	;Store to num
+LOOP:	LDA 	NUM	;Load to ACC
+	SHLA		;Shift bits to left
+	STA	NUM	;Store shifted to num
+	JOV	OV	;Jump if overflow
+	LDA# 	$0	;Move 0 to ACC
+	JSR	$E00	;Print
+	INC 	I	;Increment counter
+	LDA	I	;
+	CMA#	$024	;Compare to 24
+	JNE	LOOP	;
+	JMP	DONE	;
+DONE:	JSR	$E06	;Print newline
+	HLT
+OV:	LDA#	$1
+	JSR $E00
+NUM:	.WORD 
+I:	.WORD
+PROMPT: 	.CHAR 'Enter number (0=quit)', PROMPT_LENGTH
