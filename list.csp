@@ -1,4 +1,7 @@
 	LDS# $E00	; load stack pointer at $E00
+	LDA# $000	; load 0
+	STA  Less	; initialize less
+	STA  Greater	; initialize greater
 	JSR  $E01	; jump to subroutine $E00 aka GET_NUM
 	STA  Critical	; store critical value
 Loop:	JSR  $E01	; read in value
@@ -24,10 +27,10 @@ Jump3:	LDA  Less
 Jump:	LDA# $000	; 
 	JSR  $E00	; print 0
 	JMP  Loop
-Critical:	.WORD 0	; critical value
-Value:	.WORD 0	; value
-Less: 	.WORD	0
-Greater: 	.WORD	0
+Critical:	.WORD		; critical value
+Value:	.WORD		; value
+Less: 	.WORD		; less
+Greater: 	.WORD		; greater
 
 
 
