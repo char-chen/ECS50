@@ -3,12 +3,10 @@
 	STA  num	; store in num
 	CMA# $002	; compare to 2
 	JGT  JUMP	; jump if greater
-DONE:	NOP		; end here
-	LDA  fib	; load fib
+DONE:	LDA  fib	; load fib
 	JSR  $E00	; print fib
 	HLT		; end
-JUMP:	NOP		; NOP (jump here)
-	LDA  fib1	; load fib1
+JUMP:	LDA  fib1	; load fib1
 	ADA  fib2	; fib1 + fib2
 	STA  fib	; store in fib
 	LDA  fib1	; load fib1
@@ -20,11 +18,7 @@ JUMP:	NOP		; NOP (jump here)
 	CMA  num	; check if i < num
 	JLT  JUMP	; if yes, jump to (jump here)
 	JMP  DONE	; jump to end
-
-
-
-
-num:	.word 0		; num
+num:	.word 0	; num
 fib:	.word	1	; fib
 fib1:	.word	1	; fib1
 fib2:	.word	1	; fib2
