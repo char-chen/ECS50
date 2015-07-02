@@ -1,4 +1,10 @@
 	LDS# $E00	; load stack pointer
+	LDA# $001	; load 1
+	STA  fib	; initialize fib
+	STA  fib1	; initialize fib1
+	STA  fib2	; initialize fib2
+	LDA# $002	; load 2
+	STA  i	; initialize i
 	JSR  $E01	; read in num
 	STA  num	; store in num
 	CMA# $002	; compare to 2
@@ -18,8 +24,8 @@ JUMP:	LDA  fib1	; load fib1
 	CMA  num	; check if i < num
 	JLT  JUMP	; if yes, jump to (jump here)
 	JMP  DONE	; jump to end
-num:	.word 0	; num
-fib:	.word	1	; fib
-fib1:	.word	1	; fib1
-fib2:	.word	1	; fib2
-i:	.word	2	; i
+num:	.word		; num
+fib:	.word		; fib
+fib1:	.word		; fib1
+fib2:	.word		; fib2
+i:	.word		; i
