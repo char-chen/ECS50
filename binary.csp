@@ -1,9 +1,11 @@
 	LDS# 	$E00	;Load stack pointer to $E00
-	PSH# 	PROMPT_LENGTH	;Prints prompt
+START:	PSH# 	PROMPT_LENGTH	;Prints prompt
 	PSH# 	PROMPT
 	JSR 	$E05	;Print
 	ADS#	2
 	JSR	$E01	;Reads input
+	CMA#  0
+	JEQ	DONE2
 	STA	NUM	;Store to num
 	LDA#  0
 	STA   I
@@ -25,7 +27,8 @@ JUMP:	INC 	I	;Increment counter
 	JNE	LOOP	;
 	JMP	DONE	;
 DONE:	JSR	$E06	;Print newline
-	HLT
+	JMP   START
+DONE2:	HLT
 OV:	STA   NUM
 	LDX#  0
 	LDC   BINARY
@@ -40,3 +43,5 @@ NUM:	.WORD
 BINARY:	.CHAR '0', BINARY_LENGTH
 I:	.WORD
 PROMPT: 	.CHAR 'Enter number (0=quit)', PROMPT_LENGTH
+
+;DOES IT QUIT AT ZERO??
