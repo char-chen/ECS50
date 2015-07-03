@@ -1,9 +1,8 @@
-	LDS  $E00	; load stack pointer
+	LDS# $E00	; load stack pointer
 LOOP: 	PSH# PROMPT_LEN	; print PROMPT prompt
 	PSH# PROMPT
 	JSR  $E05
 	ADS# $002	; no clue what this does
-	JSR  $E06	; probs dont need this
 	JSR  $E01	; jump to sub routine
 	CMA# $002	; compare to 2
 	JLE  LOOP	; LOOP if <= 2
@@ -12,7 +11,6 @@ LOOP1: 	PSH# MD_LEN	; print MD prompt
 	PSH# MD
 	JSR  $E05
 	ADS# $002	; ?????
-	JSR  $E06
 	JSR  $E01	; jump to sub routine
 	CMA# $000	; compare to 0
 	JEQ  JUMP	; JUMP if equal
@@ -25,9 +23,9 @@ JUMP: 	LDA# $004	; load 4
 JUMP2: 	LDA# $003	; load 3
 	STA  count	; set count to 3
 LOOP2: 	CMA  lim	; compare count to lim
-	JGT  JUMP7	; JUMP10 if greater than
+	JGT  JUMP10	; JUMP10 if greater than
 	STA  op	; store count in op
-	LDA  $000	; load 0
+	LDA# $000	; load 0
 	STA  res	; store in res
 	STA  shift	; store in shift
 	LDA# $001	; load 1
@@ -37,9 +35,9 @@ LOOP3: 	LDA  one	; load one
 	STA  one	; store in one
 	INC  shift	; increment shift
 	LDA  shift	; load shift
-	CMA# $00E	; compare shift to 14
-	JLT  LOOP3	; LOOP3 if less than
-	LDA  one	; load one
+	CMA# $016	; compare shift to 22
+	JLT  LOOP3	; LOOP3 if less than //DEBUGGED TO HERE.
+JUMP7:	LDA  one	; load one
 	CMA  op	; compare to op
 	JGT  JUMP3	; JUMP3 if greater than
 JUMP4: 	CMA# $000	; compare to 0
@@ -47,7 +45,7 @@ JUMP4: 	CMA# $000	; compare to 0
 	LDA  res	; load res
 	ADA  one	; add one (the variable)
 	CMA  op	; compare to op
-	JLT  JUMP5	; JUMP5 if less than
+	JGE  JUMP5	; JUMP5 if >=
 	LDA  res	; load res
 	SHRA		; right shift one bit
 	STA  res	; store res
@@ -59,7 +57,7 @@ JUMP6: 	LDA  one	; load one
 JUMP3: 	SHRA		; right shift one bit
 	SHRA		; right shift one bit
 	STA  one	; store one
-	JMP  JUMP4	; JUMP4
+	JMP  JUMP7	; JUMP4
 JUMP5: 	LDA  op	; load op
 	SBA  res	; subtract res
 	SBA  one	; subtract one
@@ -73,25 +71,22 @@ DONE: 	PSH# CT_LEN	; print CT
 	PSH# CT
 	JSR  $E05
 	ADS# $002	; ??????
-	JSR  $E06
 	LDA  count	; load count
-	JSR  $E00	; call sub routine
+	JSR  $E00
 	PSH# SQRT_LEN	; print SQRT
 	PSH# SQRT
 	JSR  $E05
 	ADS# $002	; ??????
-	JSR  $E06
 	LDA  res	; load res
-	JSR  $E00	; call sub routine
+	JSR  $E00
 	LDA  count	; load count
 	ADA# $002	; add 2
 	STA  count	; store count
 	JMP  LOOP2	; LOOP2
-JUMP7: 	HLT		; end
+JUMP10: 	HLT		; end
 
 lim:	.WORD		; lim
 count:	.WORD		; count
-mode:	.WORD		; mode
 op:	.WORD		; op
 res:	.WORD		; res
 one:	.WORD		; one
