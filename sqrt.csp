@@ -36,7 +36,7 @@ LOOP3: 	LDA  one	; load one
 	INC  shift	; increment shift
 	LDA  shift	; load shift
 	CMA# $016	; compare shift to 22
-	JLT  LOOP3	; LOOP3 if less than //DEBUGGED TO HERE.
+	JLT  LOOP3	; LOOP3 if less than
 JUMP7:	LDA  one	; load one
 	CMA  op	; compare to op
 	JGT  JUMP3	; JUMP3 if greater than
@@ -45,7 +45,7 @@ JUMP4: 	CMA# $000	; compare to 0
 	LDA  res	; load res
 	ADA  one	; add one (the variable)
 	CMA  op	; compare to op
-	JGE  JUMP5	; JUMP5 if >=
+	JLE  JUMP5	; JUMP5 if >=
 	LDA  res	; load res
 	SHRA		; right shift one bit
 	STA  res	; store res
