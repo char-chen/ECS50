@@ -1,0 +1,105 @@
+ 	.EQU	ROWS,  $B00	; rows
+	.EQU	COLS,  $B01	; cols
+	.EQU	ARR,   $B02	; beginning of original array
+	LDS#	$E00	; load stack pointer
+	LDX#	$000	; sets x register
+	LDA	ROWS
+	MUL	COLS
+	SBA#	$001
+	STA	N
+	LDA#	$000
+	SBA#	$001
+	STA	X
+	LDA	COLS
+	SBA#	$001
+	STA	M
+LOOP:	INC	X
+	LDX	X
+	LDA+	ARR	; load element
+	CMA#	$000	
+	JEQ	ZERO	; if not equal to 0
+	LDA#	$000
+	STA	SUM	
+	STX	X	; transer XR to X
+	LDX	X
+	SBX#	$001	; check left
+	LDA+	ARR	; load element
+	ADA	SUM	; add
+	STA	SUM
+	LDX	X
+	ADX#	$001	; check right
+	LDA+	ARR	
+	ADA	SUM	; add
+	STA	SUM	
+	LDX	X
+	SBX	COLS	; check top
+	LDA+	ARR
+	ADA	SUM	; add
+	STA	SUM
+	LDX	X
+	ADX	COLS	; check bottom
+	LDA+	ARR
+	ADA	SUM	; add
+	CMA#	$004	; check if == 4
+	JEQ	ZERO	; jump if equal
+	LDA#	$000
+	STA	SUM
+	LDX	X
+	LDA#	$001	
+	STA+	ARR2	; element in arr2 is 1
+	AOC	N
+	JLT	LOOP
+	LDA#	$000		
+	SBA#	$001
+	STA	X
+DISPLAY: 	INC	X
+	LDX	X
+	LDA+	ARR2	; load element
+	LDX#	$000	; set xr to 0
+	CMA#	$000	; compare acc to 0
+	JEQ	Z	; if 0 jump to z
+	LDA#	'1'	; load char
+	STC	BINARY	; store in binary
+	PSH#	B_LEN
+	PSH#	BINARY
+	JSR	$E05	; print char
+	ADS#	$002	
+	LDX	X	; reset xr
+RETURN:	LDA	X	; load x	
+	MOD	COLS	; mod by cols
+	CMA	M	; if (x % cols) == cols - 1
+	JEQ	ENTER	; print new line
+	AOC	N	; check if < N
+	JLE	DISPLAY	; jump to display if less than
+	HLT		; HLT
+ZERO: 	LDX	X	;txa
+	LDA# 	$000
+	STA+	ARR2	; element in arr2 is 0
+	AOC	N
+	JLE	LOOP	; loop
+	LDA#	$000
+	SBA#	$001		
+	STA	X
+	JMP	DISPLAY
+ENTER:	CMS	N
+	JEQ	DONE
+	JSR	$E06		
+	AOC	N	; check if < N
+	JLE	DISPLAY	; jump to display if less than
+DONE:	HLT
+Z: 	LDA#	'0'	
+	STC	BINARY
+	PSH#	B_LEN
+	PSH#	BINARY
+	JSR	$E05
+	ADS#	$002	; if 0 print '1'
+	LDX	X
+	JMP	RETURN
+N:	.WORD	0
+X:	.WORD 0
+SUM:	.WORD 0
+BINARY:	.CHAR '0', B_LEN
+M:	.WORD	0
+TEMP:	.WORD 0
+.equ @, $c02
+ARR2:	.BLKW	N, 0
