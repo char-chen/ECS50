@@ -1,0 +1,121 @@
+;Main routine
+	.EQU	len, $A00	;Length of array
+	.EQU	arr, $A01	;Beginning of array
+	LDS	$E00	;Load stack pointer
+	PSH 	len	;Push array on stack
+	PSH# 	arr	
+	JSR 	Copy	;Copy()
+	ADS# 	3	
+	PSH 	len	;Push copied array
+	PSH#	Array
+	JSR	Sort	;Sort()
+	ADS# 	2
+PromptLoop:	PSH#	PromptLength	;Print prompt continuously
+	PSH#	Prompt
+	JSR	$E05	
+	ADS# 	2
+	JSR	$E06	;Get input number
+	PSHA
+	PSH	len
+	PSH#	arr
+	JSR 	Find	; Find()
+	ADS#	3
+	PSH#	IndexResultLength	
+	PSH# 	IndexResult
+	JSR 	$E05	;
+	ADS# 	2
+	JSR	$E00	;
+	PSH# 	ContinuePromptLength
+	PSH#	Continue
+	JSR	$E05	; printf("Want to continue? (1=yes, 0=no)");
+	ADS# 	2
+	JSR	$E01	; scanf("%d", &choice);
+	CMA#	1
+	JEQ	PromptLoop
+	HLT
+Prompt:	.CHAR 'Enter Data', PromptLength
+IndexResulT:	.CHAR 'Index', IndexResultLength
+Continue:	.CHAR 'Want to continue? (1=yes, 0=no)', ContinuePromptLength
+Array:	.BLKW 250
+	
+;Copy subroutine: void copy(int orig[], int dest[], int length)
+	.EQU	orig, 2	;first parameter
+	.EQU	dest, 3	;second parameter
+	.EQU	length, 4	;third parameter
+Copy:	BGN# 	0
+	LDX ! length
+	SBX#	1
+  CopyLoop:	LDA& !orig
+	STA& !dest
+	SOJ	CopyLoop
+	FIN#	0
+	RTN
+
+;Sort subroutine: void sort(int arr[], int length)
+	.EQU	I, 0	
+	.EQU	foo, 1
+	.EQU	temp, 4
+	.EQU	leng, 5
+Sort:	BGN#	2
+	LDA#	1
+	STA ! I
+  SortLoop1:	CMA !	leng
+	JEQ	Done
+	STA ! I
+	TAX
+	LDA& !	foo
+	STA !	temp
+    SortLoop2:	SBX#	1
+	CMX#	0
+	JLT	INCREMENT
+	LDA& !	temp
+	ADX# 	1		
+	STA& !	temp
+	SBX# 1		; XR = j
+	LDA ! foo
+	JMP 	SortLoop2
+  Increment:	ADX#	1
+	LDA ! foo
+	STA& !	temp
+	LDA !	I
+	ADA# 1
+	JMP SortLoop1
+
+;Find subroutine: int find(int arr[], int len, int key)
+	.EQU low, 0	;  
+	.EQU high, 1	; high = FP + 1
+	.EQU a, 4	; &array = FP + 5
+	.EQU l, 5	; array_len = FP + 6
+	.EQU key, 6	; key = FP + 7
+Find:	BGN# 2
+	CLR ! low	; low = 0
+	LDA ! l
+	SBA# 1		; ACC = array_len - 1
+	STA ! high	; high = array_len - 1
+
+FindLoop:	CMA ! low	; while(low <= high) -> while(high >= low)
+	JLT Fail
+	ADA ! low	; ACC = low + high
+	DIV# 2		; ACC = (low + high) / 2
+	TAX		; XR = mid
+	LDA ! key	; ACC = key
+	CMA& ! a
+	TXA		; ACC = mid
+	JLT less	; if (key < array[mid])
+	JGT greater	; else if (key > array[mid])
+	JMP Done		
+
+less:	SBA# 1		; ACC = mid - 1
+	STA ! high	; high = mid - 1
+	JMP FindLoop
+
+greater:	ADA# 1		; ACC = mid + 1
+	STA ! low	; low = mid + 1
+	LDA ! high	; need to load high in ACC to compare with low
+	JMP FindLoop
+
+Fail:	LDA# 0	
+	SBA# 1		; ACC = -1
+
+Done:	FIN#	2
+	RTN
