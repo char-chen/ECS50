@@ -3,8 +3,11 @@ Converts a fixed decimal floating point number to its 32-bit and 64-bit hexadeci
 
 # 2. List, Fib, Sqrt, Binary
 List: Determines how many of a list of values are less or greater than/equal to some critical value.
+
 Fib: Computes Fibonacci number of the given input.
+
 Sqrt: Computes approximate square root.
+
 Binary: Prints binary equivalent of an integer number.
 
 # 3. Edge, Sort
