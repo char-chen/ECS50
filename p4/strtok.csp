@@ -1,0 +1,128 @@
+	LDS#	$e00
+	
+	CLR 	bufferLen
+	CLR 	buffer
+LOOP:	PSH#	prompt1Len
+	PSH#	prompt1
+	JSR	$e05
+	ADS#	2	
+	
+	PSH	100
+	PSH#	buffer
+	PSH#	bufferLen
+	JSR	$e04
+	ADS#	3
+	
+	LDX#	0
+	LDC	buffer
+	CMA#	'X'
+	JEQ	done
+	
+	LDA	bufferLen
+	CMA#	0
+	JEQ	inputLetter
+	
+	STA	stringLen
+	CLR	sp
+copyString:	CMX	stringLen
+	JEQ	inputLetter
+	LDC	buffer
+	STC	string
+	ADX#	1
+	JMP	copyString	
+
+inputLetter:	PSH#	prompt2Len
+	PSH#	prompt2
+	JSR	$e05
+	ADS#	2
+	
+	PSH	1
+	PSH#	Letter
+	PSH#	LetterLen
+	JSR	$e04
+	ADS#	3
+	
+	LDA Letter
+	SHRA
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	shra
+	STA Letter
+	
+	PSH#	string
+	PSH	Letter
+	JSR	strtok
+	ADS#	2	
+
+	JMP	loop		
+
+DONE:	
+	PSH#	prompt3Len
+	PSH#	prompt3
+	JSR	$e05
+	ADS#	2
+	HLT
+
+case:	JSR	$e06
+	JMP 	loop
+
+
+
+
+	.equ	array, 2
+	.equ	let, 1
+strtok:	TSF
+
+	LDX	sp
+	CMX	stringLen
+	JGE	doneStrtok2
+	
+loop1:	LDC*	!array	; find the recurrence or the last term and print
+	CMX	stringLen
+	JEQ	doneStrtok
+	CMA	!let
+	JEQ	jump
+
+	JSR	$e08
+	ADX#	1
+	JMP	loop1
+	
+
+jump:	LDA#	0	;  
+	STC*	!array
+	ADX#	1
+
+doneStrtok:
+	JSR	$e06
+	STX	sp
+	RTN
+doneStrtok2:
+	LDA#	1
+	NEGA	
+	JSR	$e00
+	RTN
+
+prompt1:	.char 'String', prompt1Len
+prompt2:	.char 'Letter', prompt2Len
+prompt3:	.char 'Done', prompt3Len
+buffer:	.blkw 100
+bufferLen:	.word 0
+string:	.blkw	100
+stringLen:	.word	0
+Letter:	.word 0
+LetterLen:	.word 0
+sp:	.word	0
+
+
