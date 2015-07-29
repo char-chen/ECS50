@@ -1,0 +1,852 @@
+          	.EQU KBD_CNTL,  	$000
+          	.EQU KBD_STAT,  	$000
+          	.EQU KBD_DATA,  	$001
+          	.EQU KBD_FLUSH, 	$40
+          	.EQU TIM_CNTL,      	$030
+          	.EQU TIM_STAT,      	$030
+          	.EQU TIM_VALUE,     	$031
+          	.EQU TIM_COUNT,     	$034
+        	.EQU INTERRUPT_ENA,           $80
+          	.EQU RESET_READY_BIT,         $40
+          	.EQU START_AFTER_LOAD,        $10
+          	.EQU ENABLE_RESET_AND_START,  $D0
+          	.EQU ENABLE_AND_RESET,        $C0
+
+          	.EQU CRT_BUFFER,    	$100
+          	.EQU BOTTOM_RIGHT,  	$313
+          	.EQU CRT_XREG,      	$314
+	.EQU CRT_YREG,      	$315
+          	.EQU CRT_CNTL,      	$316
+          	.EQU CRT_DATA,      	$317
+	.EQU CRT_ROWS,      	14
+          	.EQU CRT_COLS,      	38
+          	.EQU CLEAR_DISPLAY, 	$01
+	.EQU HOME,	$04
+
+          	.EQU PUT_NUM,       	$E00      ; MINI_OS JSRS
+          	.EQU GET_NUM,       	$E01
+	.EQU GET_STR,	$E04
+          	.EQU PUT_STR,       	$E05
+          	.EQU PUT_NL,        	$E06
+          	.EQU PUT_NUM2,      	$E07
+          	.EQU PUT_CHR,       	$E08
+
+          	.EQU TOP,	0
+	.EQU BOTTOM,	13
+	.EQU MAX_RIGHT,	37
+	.EQU MAX_PADDLE_X,	33
+	.EQU LEFT_ARROW,	'K'
+	.EQU RIGHT_ARROW,	'M'
+	.EQU QUIT,	'x'
+	.EQU START,	$20 ; Space bar
+	.EQU NOKEY,	'n'
+	.EQU PLAY_DELAY,	1 ; # of timer iterations before paddle moves
+	.EQU BALL,	'O'
+	.EQU INTERMISSION_DELAY,	3; # of timer iterations while Game Over shown
+
+
+
+; Main();
+  	LDS#	$E00	; load stack pointer
+	CIE		; disable interrupts
+	CLR	SCORE	; clear score
+	LDA#	0
+	STA	SCORE
+	LDA#	3
+	STA	LIVES
+	LDA#	06
+	STA	BELL
+	JSR	SHOWINTRO	; showIntro()
+	LDA#	2
+	STA	TIMER_CNT	
+	LDA#	KEYISR	; keyISR stuff
+	STA	$FF8
+	LDA#	ENABLE_AND_RESET
+	OUTB	KBD_CNTL
+	LDA	DELAY	; timerISR stuff
+	OUTW	TIM_VALUE
+	LDA	DELAY
+	SBA#	100
+	STA	DELAY
+	LDA#	TIMERISR
+	STA	$FFB
+	LDA#	ENABLE_RESET_AND_START
+	OUTB	TIM_CNTL
+	SIE		; enable interrupts
+MAINLOOP:	NOP		; nop loop
+	LDA#	ENABLE_AND_RESET
+	OUTB	KBD_CNTL
+	JMP	MAINLOOP
+
+
+; void clearCRT();
+	.EQU	SETBALLX, 8	;ballx
+	.EQU	SETBALLY, 7	;bally
+	.EQU	SETPADDLE, 6	;paddle
+	.EQU	SETBALLDX, 5
+	.EQU	SETBALLDY, 4
+	.EQU	STARTNEWSCREENX, 1	; newScreenX
+	.EQU	STARTNEWSCREENY, 0	; newScreenY
+
+CLEARCRT:	BGN#	2
+	PSHA
+	PSHX
+	LDA#	PLAY_DELAY	; loads 1 and stores in timer_cnt (not sure why you need this??)
+	STA	TIMER_CNT
+	LDA#	CLEAR_DISPLAY	; clear screen
+	OUTB	CRT_CNTL
+	LDA#	1
+	STA	! STARTNEWSCREENY	; initialize y to 0
+BORDERS:	LDA#	1
+	OUTB	CRT_XREG
+	LDA	! STARTNEWSCREENY	; writes borders to screen
+	OUTB	CRT_YREG	; writes to y reg
+	LDA#	'|'	; load |
+	OUTB	CRT_DATA	; writes to crt_data
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	38
+	OUTB	CRT_XREG
+	LDA	! STARTNEWSCREENY	; writes borders to screen
+	OUTB	CRT_YREG	; writes to y reg
+	LDA#	'|'	; load |
+	OUTB	CRT_DATA
+	LDA	! STARTNEWSCREENY
+	ADA#	1
+	STA	! STARTNEWSCREENY	; increments y
+	CMA#	14	; compares to crt_rows
+	JLT	BORDERS	; loop if less than
+BRICKS1:	LDA#	1	; load 0
+	STA	! STARTNEWSCREENY	; store in y
+	OUTB	CRT_YREG
+	LDA#	2	; initializes stuff
+	STA	! STARTNEWSCREENX
+	OUTB	CRT_XREG	; store in x reg
+	LDA#	1	; load 0
+	STA	! STARTNEWSCREENY	
+	OUTB	CRT_YREG	; store in y reg
+BRICKS2:	LDA	! STARTNEWSCREENX	; writes bricks to screen
+	MOD#	6	; mod x
+	CMA#	2	; compare to 1
+	JEQ	BRICKS4	; jump to bricks4
+	CMA#	1
+	JEQ	BRICKS4
+	LDA#	'_'	; loads _
+	OUTB	CRT_DATA	; writes to crt_data
+BRICKS3:	LDA	! STARTNEWSCREENX
+	ADA#	1
+	STA	! STARTNEWSCREENX	; increments x
+	CMA#	38	; compares to crt_cols
+	JLT	BRICKS2	; loop if less than
+	JMP	CRT_DONE	; jump to done
+BRICKS4: 	LDA#	'|'	; loads |
+	OUTB	CRT_DATA	; writes to crt_data
+	JMP	BRICKS3	; jump to bricks3
+CRT_DONE:	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	PSH#	1	; calls random
+	JSR	RANDOM
+	ADS#	1	
+	SBA#	2	; stores in ballx
+	STA*	! SETBALLX
+	ADA	MAX_RIGHT
+	DIV*	! SETBALLX
+	STA*	! SETBALLX
+	LDA#	2	; load 2
+	STA*	! SETBALLY	; store in bally
+	LDA#	17	; load 17
+	STA*	! SETPADDLE	; store in paddle
+	PSH	! SETPADDLE	; show paddle
+	JSR	SHOWPADDLE
+	ADA#	3
+	STA*	! SETBALLX
+	ADS#	1
+	PSH#	1
+	JSR	RANDOM
+	ADS#	1
+	MUL#	2
+	STA*	! SETBALLDX
+	LDA#	1
+	STA*	! SETBALLDY
+	SBA*	! SETBALLDX
+	STA*	! SETBALLDX
+	POPX
+	POPA
+	FIN#	2
+	RTN	; clearCRT();
+
+
+; void getNewBallPosition(int *ballX, int *ballY, int *deltaX, int *deltaY);
+	.EQU	GETNEWBX, 5	; ballx
+	.EQU	GETNEWBY, 4	; bally
+	.EQU	GETNEWDX, 3	; deltax
+	.EQU	GETNEWDY, 2	; deltay
+
+GETNEWBALLPOSITION:
+	BGN#	0
+	PSHA
+	PSHX
+	LDA*	! GETNEWBX
+	ADA*	! GETNEWDX
+	STA*	! GETNEWBX
+	OUTB	CRT_XREG
+	LDA*	! GETNEWBY
+	ADA*	! GETNEWDY
+	STA*	! GETNEWBY
+	OUTB	CRT_YREG
+	LDA#	BALL
+	OUTB	CRT_DATA
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	POPX
+	POPA
+	FIN#	0
+	RTN	; getNewBallPosition();
+
+
+; intermission();
+	.EQU	INTERSCORE, 3	; score
+	.EQU	INTERLIVES, 2
+
+INTERMISSION:	BGN#	0
+	PSHA
+	PSHX
+	LDA#	4
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	SCOREPROMPTLEN
+	PSH#	SCOREPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA*	! INTERSCORE
+	JSR	$E00
+	LDA#	5
+	OUTB	CRT_YREG
+	OUTB	CRT_XREG
+	PSH#	LIVESPROMPTLEN
+	PSH#	LIVESPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA*	! INTERLIVES
+	JSR	$E00
+	JSR	PUT_NL
+	LDA#	6
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	GAMEOVERLEN
+	PSH#	GAMEOVERPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	KBD_FLUSH	; flush keyboard reg
+	OUTB	CRT_CNTL
+INTERMISSION2:	INB	KBD_STAT	; checks if ready bit is set
+	JEQ	INTERMISSION2
+	INB	KBD_DATA	; reads in keyboard data
+	CMA#	QUIT
+	JEQ	INTERMISSION3
+	CMA#	START	; compares to start key
+	JNE	INTERMISSION2
+	POPX
+	POPA
+	FIN#	0
+	RTN	; intermission();
+INTERMISSION3:	HLT
+
+; keyisr
+KEYISR:	PSHA		;pusha
+	LDA#	0	; disable interrupts
+	OUTB	KBD_CNTL	
+	INB	KBD_DATA	; read first key
+	CMA#	QUIT	; compares to quit key
+	JNE	KEY1	; jump to key1 if not
+	HLT		; halt
+KEY1:	CMA#	$1B	; compare to escape
+	JNE	KEYDONE	; jump to keydone if not
+KEY2:	INB	KBD_DATA	; reads second key
+	CMA#	LEFT_ARROW	; compares to left arrow
+	JEQ	KEY3	; jumps to to key3 if equal
+	CMA#	RIGHT_ARROW	; compares to right arrow
+	JEQ	KEY3	; jumps to key3 if equal
+	JMP	KEYDONE	; jumps to keydone
+KEY3:	PSH#	PADDLE
+	PSHA		; saves key
+	JSR	MOVEPADDLE	; calls movePaddle()
+	ADS#	2
+KEYDONE:	LDA#	INTERRUPT_ENA	;enable interrupts
+	OUTB	KBD_CNTL
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG	
+	POPA		; popa
+	IRTN		; return
+
+
+; void movePaddle(char key, int *x);
+	.EQU	P_MOVE, 3	; paddle
+	.EQU	KEY_MOVE, 2	; key
+
+MOVEPADDLE:	BGN#	0
+	PSHA
+	PSHX
+	LDA	! KEY_MOVE	; load key
+	CMA#	LEFT_ARROW	; compare to left
+	JEQ	MOVELEFT	; jump if equal
+	LDA*	! P_MOVE	; erase part
+	OUTB	CRT_XREG
+	LDA#	14
+	OUTB	CRT_YREG	; load y reg
+	LDA#	' '	; load blank
+	OUTB	CRT_DATA	; write to screen
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA*	! P_MOVE	; load paddle
+	ADA#	1	; add 1
+	STA*	! P_MOVE	; store paddle
+	JMP	SHOWING
+MOVELEFT:	LDA*	! P_MOVE	; erase part
+	ADA#	3
+	OUTB	CRT_XREG	
+	LDA#	14
+	OUTB	CRT_YREG	; load y reg
+	LDA#	' '	; load blank
+	OUTB	CRT_DATA	; write to screen
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA*	! P_MOVE	; load paddle
+	SBA#	1	; subtract 1
+	STA*	! P_MOVE	; store paddle
+SHOWING:	PSH	! P_MOVE	; this will push the address of paddle RIGHT
+	JSR	SHOWPADDLE	; call showPaddle()
+	ADS#	1
+	POPX
+	POPA
+	FIN#	0
+	RTN	; movePaddle();
+
+
+; int play(int *score, int *ballX, int *ballY, int *deltaX, int *deltaY, int *lives);
+	.EQU	PLAYSCORE, 7	; score
+	.EQU	PLAYBX, 6	; ballx
+	.EQU	PLAYBY, 5	; bally
+	.EQU	PLAYDX, 4	; deltax
+	.EQU	PLAYDY, 3	; deltay
+	.EQU	PLAYLIVES, 2
+
+PLAY:	BGN#	0
+	PSHA
+	PSHX
+	LDA*	! PLAYSCORE	; if score = 6, game over
+	CMA#	6
+	JEQ	DONE3
+	LDA*	! PLAYBX	; clear ball
+	OUTB	CRT_XREG
+	LDA*	! PLAYBY
+	SBA#	1
+	MUL#	38
+	SBA#	1
+	ADA*	! PLAYBX
+	TAX
+	INB+	CRT_BUFFER
+	CMA#	$7C
+	JEQ	PLAYBALL2
+	LDA*	! PLAYBY
+	OUTB	CRT_YREG
+	LDA#	' '
+	OUTB	CRT_DATA
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+LEFTSIDE:	LDA*	! PLAYBX	; load ball x
+	ADA*	! PLAYDX
+	CMA#	1	; compares to 2
+	JGT	RIGHTSIDE	; jgt rightside
+	LDA#	2	; load 2
+	STA*	! PLAYBX	; store in ball x
+	LDA#	0	; load -1
+	SBA#	1
+	MUL*	! PLAYDX
+	STA*	! PLAYDX
+	JMP	BOTTOMSIDE
+RIGHTSIDE:	LDA*	! PLAYBX	; load ball x
+	ADA*	! PLAYDX
+	CMA#	38
+	JLT	BOTTOMSIDE	; jlt playball
+	LDA#	37
+	STA*	! PLAYBX	; store in ball x
+	LDA#	0	; load -1
+	SBA#	1
+	MUL*	! PLAYDX
+	STA*	! PLAYDX	; store in delta x
+BOTTOMSIDE:	LDA*	! PLAYBY	; load ball y
+	CMA#	BOTTOM	; compare to bottom
+	JLT	TOPSIDE	; jump to topside it not equal
+	LDA#	BOTTOM
+	MUL#	38
+	TAX
+	ADX*	! PLAYBX
+	SBX#	1
+	INB+	CRT_BUFFER
+	CMA#	$2D
+	JNE	DONE2
+	LDA#	BOTTOM	; load bottom
+	STA*	! PLAYBY	; store in ball y
+	LDA#	0	; load -1
+	SBA#	1
+	MUL*	! PLAYDY
+	STA*	! PLAYDY	; store in delta y
+	JMP	PLAYBALL	
+TOPSIDE:	LDA*	! PLAYBY	; brick stuff yo
+	ADA*	! PLAYDY
+	CMA#	1
+	JNE	TOPSIDE2	; if y = 2
+	LDX*	! PLAYBX
+	ADX*	! PLAYDX
+	PSHX		; push xr
+	INB+	CRT_BUFFER	; read from crt
+	CMA#	$7C	; compare to |
+	JEQ	BRICKERASE	; jump if equal
+	CMA#	$5F	; compare to _
+	JEQ	BRICKERASE2	; jump if equal to left loop 2
+	POPX		; pop xr
+TOPSIDE2:	LDA*	! PLAYBY	; load ball y
+	CMA#	1	; compare to 0
+	JGT	PLAYBALL	; jgt leftside
+	LDA#	1	; load 0
+	STA*	! PLAYBY	; store in ball y
+PLAYBALL2:	LDA#	1	; load 1
+	STA*	! PLAYDY	; store in delta y
+PLAYBALL:	PSH	! PLAYBX
+	PSH	! PLAYBY
+	PSH	! PLAYDX
+	PSH	! PLAYDY
+	JSR	GETNEWBALLPOSITION	; call ball pos function
+	ADS#	4	; add to stack
+DONE1:	POPX
+	POPA
+	FIN#	0
+	RTN	; play();
+BRICKERASE:	LDA*	! PLAYBX
+	CMA#	7
+	JLE	PLAYBALL2
+	LDA*	! PLAYSCORE	; increment score
+	ADA#	1
+	STA*	! PLAYSCORE
+	LDA*	! PLAYBX	; load x register
+	OUTB	CRT_XREG
+	LDA*	! PLAYBY	; load y register
+	OUTB	CRT_YREG
+	LDA	BELL
+	OUTB	CRT_CNTL
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	SBX#	1	; read left port
+	INB+	CRT_BUFFER
+	CMA#	$5F	; compare to _
+	JNE	RIGHTLOOP	; if not _, jump to right loop
+LEFTLOOP:	LDA#	' '	; load space
+	OUTB+	CRT_BUFFER	; write to port
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	SBX#	1	; decrement xr
+	INB+	CRT_BUFFER
+	CMA#	$5F	; compare to _
+	JEQ	LEFTLOOP	; if equal, loop for dayz
+LEFTLOOP2:	LDA#	' '
+	OUTB+	CRT_BUFFER
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+RIGHTLOOP:	POPX		; pop xr
+RIGHTLOOP1:	INB+	CRT_BUFFER
+	CMA#	$7C	; compare to |
+	JEQ	RIGHTLOOP3
+	LDA#	' '	; load space
+	OUTB+	CRT_BUFFER	; write to crt_data
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	ADX#	1	; increment xr
+	JMP	RIGHTLOOP1
+RIGHTLOOP3:	LDA#	' '	; load space
+	OUTB+	CRT_BUFFER	; write to crt_data
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	0	; load -1
+	SBA#	1
+	MUL*	! PLAYDY
+	STA*	! PLAYDY
+	ADX#	1
+	INB+	CRT_BUFFER
+	CMA#	$5F
+	JEQ	RIGHTLOOP1
+	LDA#	4	; show score here
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	SCOREPROMPTLEN	; no lives??
+	PSH#	SCOREPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA*	! PLAYSCORE
+	JSR	$E00
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDX#	0
+DELAYLOOP:	NOP
+	AOC#	2000
+	JLT	DELAYLOOP
+	LDA#	4
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	BLANKLEN
+	PSH#	BLANKPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	JMP	TOPSIDE2	; jump to topside2
+
+
+BRICKERASE2:	LDA*	! PLAYSCORE	; increment score
+	ADA#	1
+	STA*	! PLAYSCORE
+	LDA*	! PLAYBX	; load x register
+	OUTB	CRT_XREG
+	LDA*	! PLAYBY	; load y register
+	OUTB	CRT_YREG
+	LDA	BELL
+	OUTB	CRT_CNTL
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	SBX#	1	; decrement xr
+	INB+	CRT_BUFFER
+	CMA#	$5F	; compare to _
+	JEQ	BRICKERASE2	; if equal, loop for dayz
+	LDA#	' '
+	OUTB+	CRT_BUFFER
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	POPX		; pop xr
+RIGHTLOOP2:	LDA#	' '	; load space
+	OUTB+	CRT_BUFFER	; write to crt_data
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	ADX#	1	; increment xr
+	INB+	CRT_BUFFER	; reads from crt_data
+	CMA#	$5F	; cma# _
+	JEQ	RIGHTLOOP2	; jeq right loop
+	LDA#	' '	; load space
+	OUTB+	CRT_BUFFER	; write to crt_data
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	0	; load -1
+	SBA#	1
+	MUL*	! PLAYDY
+	STA*	! PLAYDY
+	LDA#	4	; show score here
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	SCOREPROMPTLEN
+	PSH#	SCOREPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA*	! PLAYSCORE
+	JSR	$E00
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDX#	0
+DELAYLOOP2:	NOP
+	AOC#	1000
+	JLT	DELAYLOOP2
+	LDA#	4
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	BLANKLEN
+	PSH#	BLANKPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	JMP	TOPSIDE2	; jump to topside2
+DONE2:	LDA*	! PLAYLIVES
+	SBA#	1
+	STA*	! PLAYLIVES 
+	CMA#	0
+	JEQ	DONE3
+	PSH	! PLAYSCORE
+	PSH	! PLAYLIVES
+	JSR	SHOWSCORE
+	ADS#	2
+	LDA#	4	; erase the writing. damn but how.
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	BLANKLEN
+	PSH#	BLANKPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	5
+	OUTB	CRT_YREG
+	OUTB	CRT_XREG
+	PSH#	BLANKLEN
+	PSH#	BLANKPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	6
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	BLANKLEN
+	PSH#	BLANKPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	3	;reinitialize variables
+	STA*	! PLAYBX
+	STA*	! PLAYBY		
+	JMP	DONE1
+DONE3:	LDA#	INTERMISSION_DELAY
+	STA	TIMER_CNT
+	JMP	DONE1
+
+
+; int random2(int max); leaves result in ACC
+	.EQU	RANDOMSEED, 2	; random2Max
+
+RANDOM:
+	BGN#	0
+	PSHX
+	LDA#	2789	; load 2789
+	ADA#	1997	; add 1997
+	MOD#	2048	; mod by 2048
+	INC	! RANDOMSEED	; add one to random2Max
+	MOD	! RANDOMSEED	; mod by random2Max
+	POPX
+	FIN#	0
+	RTN	; random2();
+
+
+; void showIntro();
+SHOWINTRO:	BGN#	0	; FINISHED!!
+	PSHA
+	LDA#	CLEAR_DISPLAY	; clears display
+	OUTB	CRT_CNTL
+	PSH#	INTRO1LEN	; intro1
+	PSH#	INTRO1
+	JSR	PUT_STR
+	ADS#	2
+	JSR	PUT_NL
+	JSR	PUT_NL
+	JSR	PUT_NL
+	PSH#	INTRO2LEN	; intro2
+	PSH#	INTRO2
+	JSR	PUT_STR
+	ADS#	2
+	JSR	PUT_NL
+	PSH#	INTRO3LEN	; intro3
+	PSH#	INTRO3
+	JSR	PUT_STR
+	ADS#	2
+	JSR	PUT_NL
+	PSH#	INTRO4LEN	; intro4
+	PSH#	INTRO4
+	JSR	PUT_STR
+	ADS#	2
+	JSR	PUT_NL
+	PSH#	INTRO5LEN	; intro5
+	PSH#	INTRO5
+	JSR	PUT_STR
+	ADS#	2
+	JSR	PUT_NL
+	JSR	PUT_NL
+	JSR	PUT_NL
+	JSR	PUT_NL
+	PSH#	INTRO6LEN	; intro6
+	PSH#	INTRO6
+	JSR	PUT_STR
+	ADS#	2
+	JSR	PUT_NL
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	KBD_FLUSH	; flush keyboard reg
+	OUTB	CRT_CNTL
+SHOWINTRO2:	INB	KBD_STAT	; checks if ready bit is set
+	JEQ	SHOWINTRO2
+	INB	KBD_DATA	; reads in keyboard data
+	CMA#	QUIT
+	JEQ	SHOWINTRO3
+	CMA#	START	; compares to start key
+	JNE	SHOWINTRO2
+	POPA
+	FIN#	0
+	RTN	; SHOWINTRO();
+SHOWINTRO3:	HLT
+
+
+; void showPaddle(int x, char letter);
+	.EQU	PADDLE_X, 3	; pass in variable for paddle x
+	.EQU	LOCAL_X, 0	; x to store x reg
+
+SHOWPADDLE:
+	BGN#	1
+	PSHA
+	PSHX
+	LDA#	0	; load 0
+	STA	! LOCAL_X	; initialize local_x
+	LDA*	! PADDLE_X
+	CMA#	34	; if paddle x is greater than 33, paddle x is 33
+	JGE	THIRTYTHREE	; urgh do i really really need another loop here jfc fuck assembly.
+	CMA#	2
+	JLT	TWO	; if paddle x is less than 1, paddle x is 1
+PADDLE2:	LDA#	14	; load 14
+	OUTB	CRT_YREG	; store in y reg
+	LDA	! LOCAL_X	; load x
+	ADA*	! PADDLE_X	; add paddle x
+	OUTB	CRT_XREG	; store in x reg
+	LDA#	'-'	; load _
+	OUTB	CRT_DATA	; store in crt_data
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA	! LOCAL_X	; load x
+	ADA#	1	; add 1
+	STA	! LOCAL_X	
+	CMA#	4	; compare to 4
+	JLT	PADDLE2	; loop if less than
+	JMP	PADDLEDONE
+THIRTYTHREE:	LDA#	34
+	STA*	! PADDLE_X
+	JMP	PADDLE2
+TWO:	LDA#	2
+	STA*	! PADDLE_X
+	JMP	PADDLE2
+PADDLEDONE:	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	POPX
+	POPA
+	FIN#	1
+	RTN	; showPaddle();
+
+
+; void showScore(int score, int lives);
+	.EQU	MYSCORE, 3	; score
+	.EQU	MYLIVES, 2
+
+SHOWSCORE:	BGN#	0 	
+	PSHA
+	PSHX
+	LDA#	4
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	SCOREPROMPTLEN
+	PSH#	SCOREPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA*	! MYSCORE
+	JSR	$E00
+	LDA#	5
+	OUTB	CRT_YREG
+	OUTB	CRT_XREG
+	PSH#	LIVESPROMPTLEN
+	PSH#	LIVESPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA*	! MYLIVES
+	JSR	$E00
+	LDA#	6
+	OUTB	CRT_YREG
+	LDA#	5
+	OUTB	CRT_XREG
+	PSH#	CONTINUELEN
+	PSH#	CONTINUEPROMPT
+	JSR	PUT_STR
+	ADS#	2
+	LDA#	0	; hide cursor
+	OUTB	CRT_XREG
+	LDA#	KBD_FLUSH	; flush keyboard reg
+	OUTB	KBD_CNTL
+SHOWSCORE2:	INB	KBD_STAT	; checks if ready bit is set
+	JEQ	SHOWSCORE2
+	INB	KBD_DATA	; reads in keyboard data
+	CMA#	QUIT
+	JEQ	SHOWSCORE3
+	CMA#	START	; compares to start key
+	JNE	SHOWSCORE2
+	POPX
+	POPA
+	FIN#	0 
+	RTN	; showScore();
+SHOWSCORE3:	HLT
+
+
+; timerisr 
+TIMERISR:	PSHA		;psha
+	INC	TIMER	; increment timer
+	LDA	TIMER	; load timer
+	CMA	TIMER_CNT	; compare to timer_cnt
+	JLT	TIMER_DONE	; if less than, jump to timer done
+	CMA#	INTERMISSION_DELAY
+	JEQ	TIMERISR3
+	CMA#	2
+	JNE	TIMERISR1
+	LDA#	PLAY_DELAY	; load play_delay
+	STA	TIMER_CNT	; store in timer_cnt
+	LDA#	1
+	STA	DELTAX
+	STA	DELTAY
+	PSH#	BALLX
+	PSH#	BALLY
+	PSH#	PADDLE
+	PSH#	DELTAX
+	PSH#	DELTAY
+	JSR	CLEARCRT
+	ADS#	5
+	JMP	TIMERISR2
+TIMERISR1:	PSH#	SCORE	; psh variables
+	PSH#	BALLX
+	PSH#	BALLY
+	PSH#	DELTAX
+	PSH#	DELTAY
+	PSH#	LIVES
+	JSR	PLAY	; jump to play
+	ADS#	6	; pop variables
+	JMP	TIMERISR2
+TIMERISR3:	PSH#	SCORE
+	PSH#	LIVES	
+	JSR	INTERMISSION ; game over screen
+	ADS#	2
+	HLT
+TIMERISR2:	CLR	TIMER
+TIMER_DONE:	LDA#	ENABLE_AND_RESET	; load enable and reset bit
+	OUTB	TIM_CNTL	; write to tim_cntl
+	POPA		; popa
+	IRTN		; timerISR();
+
+	.EQU @, $500	
+TIMER_CNT:	.WORD	PLAY_DELAY
+KEY:	.WORD	
+DELAY:    	.WORD 2000
+TIMER:	.WORD	0
+SCORE:	.WORD	0
+LIVES:	.WORD	0
+PADDLE:	.WORD 17
+BALLX:	.WORD 2
+BALLY:	.WORD 3
+DELTAX:	.WORD 1
+DELTAY:	.WORD	1	
+BELL:	.WORD 0
+INTRO1:	.CHAR 'Breakout Introduction', INTRO1LEN
+INTRO2:	.CHAR 'This is a very basic prototype', INTRO2LEN
+INTRO3:	.CHAR 'It has an invincible brick', INTRO3LEN
+INTRO4:  	.CHAR 'Press SPACE to begin', INTRO4LEN
+INTRO5:  	.CHAR 'Press X to end game', INTRO5LEN
+INTRO6:	.CHAR	'ECS 050 Summer Session 1 2015', INTRO6LEN
+SCOREPROMPT:	.CHAR 'Score: ', SCOREPROMPTLEN
+LIVESPROMPT:	.CHAR 'Lives: ', LIVESPROMPTLEN
+GAMEOVERPROMPT: 	.CHAR 'Game Over', GAMEOVERLEN
+BLANKPROMPT:	.CHAR '                        ', BLANKLEN
+CONTINUEPROMPT:	.CHAR 'Press SPACE to continue', CONTINUELEN
