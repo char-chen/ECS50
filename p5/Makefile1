@@ -1,0 +1,16 @@
+# Authors: Sean Davis
+
+strstr1.out : strstr1.o mystrstr.o 
+	gcc -g -o strstr1.out strstr1.o mystrstr.o 
+
+strstr1.o : strstr1.s
+	as --gstabs -o strstr1.o strstr1.s
+	
+strstr1.s : strstr1.c
+	gcc -S strstr1.c
+	
+mystrstr.o : mystrstr.asm
+	nasm -g -f elf mystrstr.asm
+
+clean : 
+	rm -f strstr1.out mystrstr.o strstr1.s core 

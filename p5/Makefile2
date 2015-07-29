@@ -1,0 +1,11 @@
+strstr2.out : strstr2.o
+	gcc -g -o strstr2.out strstr2.o
+
+strstr2.o : strstr2.s
+	as --gstabs -o strstr2.o strstr2.s
+
+strstr2.s : strstr2.c
+	gcc -S -masm=intel strstr2.c                          
+
+clean:
+	rm strstr2.out strstr2.o strstr2.s
